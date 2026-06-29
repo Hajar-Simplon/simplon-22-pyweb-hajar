@@ -18,10 +18,10 @@ lint:
 
 build-image:
   stage: build
-  image: docker:latest
+  image: docker:28.3
 
   services:
-    - docker:dind
+    - docker:28.3-dinddind
 
   variables:
     DOCKER_HOST: tcp://docker:2375
