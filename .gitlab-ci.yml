@@ -67,12 +67,52 @@ build-image:
 
     - az account set --subscription "$AZURE_SUBSCRIPTION_ID"
 
-  script:
+build-image:
+  stage: build
+
+  image: docker:28.3
+
+  services:
+    - docker:28.3-dind
+
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+
+  id_tokens:
+    AZURE_TOKEN:
+      aud: api://AzureADTokenExchange
+
+  before_script:
+    # Install Azure CLI
+    - apk add --no-cache curl bash python3 py3-pip
+    - pip install azure-cli
+
+    # Authenticate to Azure using OIDC
     - |
-      az acr build \
-        --registry $ACR_NAME \
-        --image $IMAGE_NAME:$IMAGE_TAG \
-        .
+      az login \
+        --service-principal \
+        --username "$AZURE_CLIENT_ID" \
+        --tenant "$AZURE_TENANT_ID" \
+        --federated-token "$AZURE_TOKEN"
+
+    - az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+
+    # Login to Azure Container Registry
+    - az acr login --name $ACR_NAME
+
+  script:
+    # Build Docker image
+    - docker build -t $IMAGE_NAME:$IMAGE_TAG .
+
+    # Tag image for ACR
+    - docker tag \
+        $IMAGE_NAME:$IMAGE_TAG \
+        $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
+
+    # Push image
+    - docker push \
+        $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
 
 # ==========================================
 # Deploy
@@ -106,7 +146,7 @@ deploy:
 
   environment:
     name: staging
-    url: https://<YOUR-CONTAINER-APP-URL>
+    url: https://aca-pyweb-hajar.orangecliff-d127cb29.francecentral.azurecontainerapps.io
 
   rules:
     - if: '$CI_COMMIT_BRANCH == "feature/azure-container-apps"'
