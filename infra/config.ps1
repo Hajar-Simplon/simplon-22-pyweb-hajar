@@ -19,3 +19,26 @@ $Image = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
 # Application
 
 $TargetPort = 80
+
+# ==========================================
+# Managed Identity
+# ==========================================
+
+$ManagedIdentityName = "mi-gitlab-aca"
+
+# ==========================================
+# Azure Roles
+# ==========================================
+
+$AcrRole = "AcrPush"
+$ContainerAppsRole = "Contributor"
+
+# ==========================================
+# GitLab OIDC
+# ==========================================
+
+$GitLabIssuer = "https://gitlab.com"
+$GitLabProjectPath = "hajarmezouar/simplon-22-pyweb-hajar"
+$GitLabBranch = "feature/azure-container-apps"
+$FederatedCredentialName = "gitlab-feature"
+$Audience = "api://AzureADTokenExchange"

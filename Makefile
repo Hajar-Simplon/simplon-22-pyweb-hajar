@@ -59,6 +59,16 @@ infra-create:
 	@echo "=== Creating Azure infrastructure ==="
 	@pwsh -File ./infra/create.ps1
 
+.PHONY: identity
+identity:
+	@echo "=== Configuring Azure Managed Identity ==="
+	@pwsh -File ./infra/identity.ps1
+
+.PHONY: federation
+federation:
+	@echo "=== Configuring GitLab OIDC ==="
+	@pwsh -File ./infra/federation.ps1
+	
 .PHONY: infra-destroy
 infra-destroy:
 	@echo "=== Destroying Azure infrastructure ==="
