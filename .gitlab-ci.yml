@@ -11,9 +11,9 @@ variables:
 
 stages:
   - test
+  - infra-setup
   - build
   - deploy
-  - infra-setup
   - infra-teardown
 
 # ==========================================

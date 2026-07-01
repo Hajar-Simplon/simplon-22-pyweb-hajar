@@ -77,6 +77,20 @@ $AcrId = az acr show `
     --query id `
     -o tsv
 
+Write-Host ""
+Write-Host "Checking Container App..."
+
+$appExists = az containerapp list `
+    --resource-group $ResourceGroup `
+    --query "[?name=='$ContainerAppName'].name" `
+    -o tsv
+
+if (-not $appExists) {
+
+    throw "Container App '$ContainerAppName' does not exist. Run create.ps1 first."
+
+}
+
 $ContainerAppId = az containerapp show `
     --name $ContainerAppName `
     --resource-group $ResourceGroup `
