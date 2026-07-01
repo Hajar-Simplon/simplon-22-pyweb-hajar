@@ -55,7 +55,7 @@ build-image:
 
   services:
     - docker:28.3-dind
-
+    
   variables:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_TLS_CERTDIR: ""
@@ -75,6 +75,15 @@ build-image:
         --federated-token "$AZURE_TOKEN"
 
     - az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+    
+    - echo "===== Docker environment ====="
+    - env | grep DOCKER || true
+
+    - echo "===== Docker version ====="
+    - docker version
+
+    - echo "===== Docker info ====="
+    - docker info
 
     # Login to Azure Container Registry
     - az acr login --name $ACR_NAME
@@ -111,7 +120,6 @@ deploy:
         --federated-token "$AZURE_TOKEN"
 
     - az account set --subscription "$AZURE_SUBSCRIPTION_ID"
-    - az acr login --name $ACR_NAME
 
   script:
     - |
