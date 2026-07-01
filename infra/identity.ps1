@@ -60,21 +60,35 @@ Write-Host "Client ID:"
 Write-Host $ClientId
 
 Write-Host ""
+Write-Host "Save this value in GitLab as:"
+Write-Host "AZURE_CLIENT_ID = $ClientId"
+
+Write-Host ""
 Write-Host "Principal ID:"
 Write-Host $PrincipalId
 
 # ------------------------------------------
-# ACR Role
+# Get Azure Resource IDs
 # ------------------------------------------
-
-Write-Host ""
-Write-Host "Assigning AcrPush..."
 
 $AcrId = az acr show `
     --resource-group $ResourceGroup `
     --name $AcrName `
     --query id `
     -o tsv
+
+$ContainerAppId = az containerapp show `
+    --name $ContainerAppName `
+    --resource-group $ResourceGroup `
+    --query id `
+    -o tsv
+
+# ------------------------------------------
+# AcrPush Role
+# ------------------------------------------
+
+Write-Host ""
+Write-Host "Checking AcrPush role..."
 
 $acrRoleExists = az role assignment list `
     --assignee-object-id $PrincipalId `
@@ -100,37 +114,62 @@ else {
 }
 
 # ------------------------------------------
-# Container Apps Role
+# Container Registry Contributor Role
 # ------------------------------------------
 
 Write-Host ""
-Write-Host "Assigning Container Apps Contributor..."
+Write-Host "Checking Container Registry Contributor role..."
 
-$RgId = az group show `
-    --name $ResourceGroup `
-    --query id `
-    -o tsv
-
-$containerRoleExists = az role assignment list `
+$containerRegistryRoleExists = az role assignment list `
     --assignee-object-id $PrincipalId `
-    --scope $RgId `
-    --query "[?roleDefinitionName=='$ContainerAppsRole'].id" `
+    --scope $AcrId `
+    --query "[?roleDefinitionName=='$ContainerRegistryRole'].id" `
     -o tsv
 
-if ($containerRoleExists) {
+if ($containerRegistryRoleExists) {
 
-    Write-Host "Container Apps role already assigned."
+    Write-Host "Container Registry Contributor role already assigned."
 
 }
 else {
 
-    Write-Host "Assigning Container Apps Contributor..."
+    Write-Host "Assigning Container Registry Contributor..."
+
+    az role assignment create `
+        --assignee-object-id $PrincipalId `
+        --assignee-principal-type ServicePrincipal `
+        --role $ContainerRegistryRole `
+        --scope $AcrId
+
+}
+
+# ------------------------------------------
+# Azure Container Apps Contributor Role
+# ------------------------------------------
+
+Write-Host ""
+Write-Host "Checking Azure Container Apps Contributor role..."
+
+$containerAppsRoleExists = az role assignment list `
+    --assignee-object-id $PrincipalId `
+    --scope $ContainerAppId `
+    --query "[?roleDefinitionName=='$ContainerAppsRole'].id" `
+    -o tsv
+
+if ($containerAppsRoleExists) {
+
+    Write-Host "Azure Container Apps Contributor role already assigned."
+
+}
+else {
+
+    Write-Host "Assigning Azure Container Apps Contributor..."
 
     az role assignment create `
         --assignee-object-id $PrincipalId `
         --assignee-principal-type ServicePrincipal `
         --role $ContainerAppsRole `
-        --scope $RgId
+        --scope $ContainerAppId
 
 }
 

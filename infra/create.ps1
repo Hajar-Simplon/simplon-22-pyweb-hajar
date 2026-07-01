@@ -150,6 +150,9 @@ else {
         --name $ContainerAppName `
         --resource-group $ResourceGroup `
         --system-assigned
+    
+    Write-Host "Waiting for Managed Identity propagation..."
+    Start-Sleep -Seconds 15
 
 }
 
@@ -200,13 +203,48 @@ else {
 # -----------------------------------
 
 Write-Host ""
-Write-Host "Configuring Container App registry..."
+Write-Host "Checking Container App registry..."
 
-az containerapp registry set `
+$registryConfigured = az containerapp registry list `
     --name $ContainerAppName `
     --resource-group $ResourceGroup `
-    --server "$AcrName.azurecr.io" `
-    --identity system
+    --query "[?server=='$AcrName.azurecr.io'].server" `
+    -o tsv
+
+if ($registryConfigured) {
+
+    Write-Host "Container Registry already configured."
+
+}
+else {
+
+    Write-Host "Configuring Container App registry..."
+
+    az containerapp registry set `
+        --name $ContainerAppName `
+        --resource-group $ResourceGroup `
+        --server "$AcrName.azurecr.io" `
+        --identity system
+
+}
+
+# -----------------------------------
+# Configure GitLab Managed Identity
+# -----------------------------------
+
+Write-Host ""
+Write-Host "Configuring GitLab Managed Identity..."
+
+pwsh "$PSScriptRoot/identity.ps1"
+
+# -----------------------------------
+# Configure GitLab Federation
+# -----------------------------------
+
+Write-Host ""
+Write-Host "Configuring GitLab OIDC Federation..."
+
+pwsh "$PSScriptRoot/federation.ps1"
 
 Write-Host ""
 Write-Host "===================================="

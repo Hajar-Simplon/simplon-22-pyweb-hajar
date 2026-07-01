@@ -30,8 +30,9 @@ $ManagedIdentityName = "mi-gitlab-aca"
 # Azure Roles
 # ==========================================
 
-$AcrRole = "AcrPush"
-$ContainerAppsRole = "Contributor"
+$AcrPushRole = "AcrPush"
+$ContainerRegistryRole = "Container Registry Contributor"
+$ContainerAppsRole = "Azure Container Apps Contributor"
 
 # ==========================================
 # GitLab OIDC
