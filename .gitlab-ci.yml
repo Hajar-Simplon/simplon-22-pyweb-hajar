@@ -46,7 +46,35 @@ lint:
     - flake8 app.py
 
 # ==========================================
-# Build & Push (Azure Container Registry)
+# Infrastructure Setup
+# ==========================================
+
+infra:setup:
+  stage: infra-setup
+
+  image: registry.gitlab.com/hajarmezouar/simplon-22-pyweb-hajar/toolbox:v2
+
+  id_tokens:
+    AZURE_TOKEN:
+      aud: api://AzureADTokenExchange
+
+  before_script:
+    - |
+      az login \
+        --service-principal \
+        --username "$AZURE_CLIENT_ID" \
+        --tenant "$AZURE_TENANT_ID" \
+        --federated-token "$AZURE_TOKEN"
+
+    - az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+
+  script:
+    - pwsh ./infra/create.ps1
+
+  when: manual
+
+# ==========================================
+# Build & Push
 # ==========================================
 
 build-image:
@@ -56,7 +84,7 @@ build-image:
 
   services:
     - docker:28.3-dind
-    
+
   variables:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_TLS_CERTDIR: ""
@@ -67,7 +95,6 @@ build-image:
 
   before_script:
 
-    # Authenticate to Azure using OIDC
     - |
       az login \
         --service-principal \
@@ -76,7 +103,7 @@ build-image:
         --federated-token "$AZURE_TOKEN"
 
     - az account set --subscription "$AZURE_SUBSCRIPTION_ID"
-    
+
     - echo "===== Docker environment ====="
     - env | grep DOCKER || true
 
@@ -86,17 +113,11 @@ build-image:
     - echo "===== Docker info ====="
     - docker info
 
-    # Login to Azure Container Registry
     - az acr login --name $ACR_NAME
 
   script:
-    # Build Docker image
     - docker build -t $IMAGE_NAME:$IMAGE_TAG .
-
-    # Tag image for ACR
     - docker tag $IMAGE_NAME:$IMAGE_TAG $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
-
-    # Push image
     - docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
 
 # ==========================================
@@ -105,6 +126,72 @@ build-image:
 
 deploy:
   stage: deploy
+
+  needs:
+    - build-image
+
+  image: registry.gitlab.com/hajarmezouar/simplon-22-pyweb-hajar/toolbox:v2
+
+  id_tokens:
+    AZURE_TOKEN:
+      aud: api://AzureADTokenExchange
+
+  before_script:
+
+    - |
+      az login \
+        --service-principal \
+        --username "$AZURE_CLIENT_ID" \
+        --tenant "$AZURE_TENANT_ID" \
+        --federated-token "$AZURE_TOKEN"
+
+    - az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+
+  script:
+
+    - echo "===== ACCOUNT ====="
+    - az account show --output table
+
+    - echo "===== RESOURCE GROUP ====="
+    - az group show --name $RESOURCE_GROUP --output table
+
+    - echo "===== CONTAINER APPS ====="
+    - az containerapp list --resource-group $RESOURCE_GROUP --output table
+
+    - echo "===== TARGET APP ====="
+    - az containerapp show \
+        --name $CONTAINER_APP_NAME \
+        --resource-group $RESOURCE_GROUP
+
+    - |
+      az containerapp update \
+        --name $CONTAINER_APP_NAME \
+        --resource-group $RESOURCE_GROUP \
+        --image $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
+
+    - |
+      APP_URL=$(az containerapp show \
+        --name $CONTAINER_APP_NAME \
+        --resource-group $RESOURCE_GROUP \
+        --query properties.configuration.ingress.fqdn \
+        -o tsv)
+
+      echo "DYNAMIC_ENVIRONMENT_URL=https://$APP_URL" > deploy.env
+
+  artifacts:
+    reports:
+      dotenv: deploy.env
+
+  environment:
+    name: staging
+    url: $DYNAMIC_ENVIRONMENT_URL
+
+# ==========================================
+# Infrastructure Teardown
+# ==========================================
+
+infra:teardown:
+  stage: infra-teardown
 
   image: registry.gitlab.com/hajarmezouar/simplon-22-pyweb-hajar/toolbox:v2
 
@@ -121,50 +208,6 @@ deploy:
         --federated-token "$AZURE_TOKEN"
 
     - az account set --subscription "$AZURE_SUBSCRIPTION_ID"
-
-  script:
-    - |
-        az containerapp update \
-          --name $CONTAINER_APP_NAME \
-          --resource-group $RESOURCE_GROUP \
-          --image $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
-  
-        APP_URL=$(az containerapp show \
-          --name $CONTAINER_APP_NAME \
-          --resource-group $RESOURCE_GROUP \
-          --query properties.configuration.ingress.fqdn \
-          -o tsv)
-  
-        echo "DYNAMIC_ENVIRONMENT_URL=https://$APP_URL" > deploy.env
-  
-  artifacts:
-    reports:
-      dotenv: deploy.env
-  
-  environment:
-    name: staging
-    url: $DYNAMIC_ENVIRONMENT_URL
-
-# ==========================================
-# Infrastructure Setup 
-# ==========================================
-
-infra:setup:
-  stage: infra-setup
-  image: registry.gitlab.com/hajarmezouar/simplon-22-pyweb-hajar/toolbox:v2
-
-  script:
-    - pwsh ./infra/create.ps1
-
-  when: manual
-
-# ==========================================
-# Infrastructure Teardown 
-# ==========================================
-
-infra:teardown:
-  stage: infra-teardown
-  image: registry.gitlab.com/hajarmezouar/simplon-22-pyweb-hajar/toolbox:v2
 
   script:
     - pwsh ./infra/destroy.ps1
