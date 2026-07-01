@@ -163,7 +163,7 @@ infra:setup:
 # ==========================================
 
 infra:teardown:
-  stage: infrateardown
+  stage: infra-teardown
   image: registry.gitlab.com/hajarmezouar/simplon-22-pyweb-hajar/toolbox:v1
 
   script:
