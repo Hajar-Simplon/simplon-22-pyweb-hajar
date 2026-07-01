@@ -30,10 +30,6 @@ if (-not $identityExists) {
 # ------------------------------------------
 # Build Subject
 # ------------------------------------------
-Write-Host "GitLabProjectPath = '$GitLabProjectPath'"
-Write-Host "GitLabBranch      = '$GitLabBranch'"
-Write-Host "GitLabIssuer      = '$GitLabIssuer'"
-Write-Host "Audience          = '$Audience'"
 
 $Subject = "project_path:${GitLabProjectPath}:ref_type:branch:ref:${GitLabBranch}"
 Write-Host ""

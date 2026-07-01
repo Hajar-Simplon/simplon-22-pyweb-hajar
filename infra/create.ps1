@@ -17,11 +17,24 @@ Write-Host ""
 # -----------------------------------
 
 Write-Host ""
-Write-Host "Creating Resource Group..."
+Write-Host "Checking Resource Group..."
 
-az group create `
-    --name $ResourceGroup `
-    --location $Location
+$rgExists = az group exists --name $ResourceGroup
+
+if ($rgExists -eq "true") {
+
+    Write-Host "Resource Group already exists."
+
+}
+else {
+
+    Write-Host "Creating Resource Group..."
+
+    az group create `
+        --name $ResourceGroup `
+        --location $Location
+
+}
 
 # -----------------------------------
 # Azure Container Registry
@@ -106,9 +119,96 @@ else {
         --environment $EnvironmentName `
         --image $Image `
         --target-port $TargetPort `
-        --ingress external
+        --ingress external `
+        --system-assigned
 
 }
 
+# -----------------------------------
+# Container App Managed Identity
+# -----------------------------------
+
 Write-Host ""
+Write-Host "Checking Container App Managed Identity..."
+
+$IdentityType = az containerapp show `
+    --name $ContainerAppName `
+    --resource-group $ResourceGroup `
+    --query identity.type `
+    -o tsv
+
+if ($IdentityType -eq "SystemAssigned") {
+
+    Write-Host "Managed Identity already assigned."
+
+}
+else {
+
+    Write-Host "Assigning Managed Identity..."
+
+    az containerapp identity assign `
+        --name $ContainerAppName `
+        --resource-group $ResourceGroup `
+        --system-assigned
+
+}
+
+# -----------------------------------
+# AcrPull Role
+# -----------------------------------
+
+Write-Host ""
+Write-Host "Checking AcrPull role assignment..."
+
+$ContainerPrincipalId = az containerapp show `
+    --name $ContainerAppName `
+    --resource-group $ResourceGroup `
+    --query identity.principalId `
+    -o tsv
+
+$AcrId = az acr show `
+    --resource-group $ResourceGroup `
+    --name $AcrName `
+    --query id `
+    -o tsv
+
+$AcrPullExists = az role assignment list `
+    --assignee-object-id $ContainerPrincipalId `
+    --scope $AcrId `
+    --query "[?roleDefinitionName=='AcrPull'].id" `
+    -o tsv
+
+if ($AcrPullExists) {
+
+    Write-Host "AcrPull role already assigned."
+
+}
+else {
+
+    Write-Host "Assigning AcrPull role..."
+
+    az role assignment create `
+        --assignee-object-id $ContainerPrincipalId `
+        --assignee-principal-type ServicePrincipal `
+        --role AcrPull `
+        --scope $AcrId
+
+}
+
+# -----------------------------------
+# Configure Azure Container Registry
+# -----------------------------------
+
+Write-Host ""
+Write-Host "Configuring Container App registry..."
+
+az containerapp registry set `
+    --name $ContainerAppName `
+    --resource-group $ResourceGroup `
+    --server "$AcrName.azurecr.io" `
+    --identity system
+
+Write-Host ""
+Write-Host "===================================="
 Write-Host "Infrastructure is up to date."
+Write-Host "===================================="
