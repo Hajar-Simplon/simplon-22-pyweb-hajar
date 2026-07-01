@@ -13,7 +13,8 @@ stages:
   - test
   - build
   - deploy
-  - infra
+  - infra-setup
+  - infra-teardown
 
 # ==========================================
 # Common Python configuration
@@ -149,7 +150,7 @@ deploy:
 # ==========================================
 
 infra:setup:
-  stage: infra
+  stage: infra-setup
   image: registry.gitlab.com/hajarmezouar/simplon-22-pyweb-hajar/toolbox:v1
 
   script:
@@ -162,7 +163,7 @@ infra:setup:
 # ==========================================
 
 infra:teardown:
-  stage: infra
+  stage: infrateardown
   image: registry.gitlab.com/hajarmezouar/simplon-22-pyweb-hajar/toolbox:v1
 
   script:
