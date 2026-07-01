@@ -52,7 +52,7 @@ lint:
 build-image:
   stage: build
 
-  image: registry.gitlab.com/hajarmezouar/simplon-22-pyweb-hajar/toolbox:v1
+  image: registry.gitlab.com/hajarmezouar/simplon-22-pyweb-hajar/toolbox:v2
 
   services:
     - docker:28.3-dind
@@ -106,7 +106,7 @@ build-image:
 deploy:
   stage: deploy
 
-  image: registry.gitlab.com/hajarmezouar/simplon-22-pyweb-hajar/toolbox:v1
+  image: registry.gitlab.com/hajarmezouar/simplon-22-pyweb-hajar/toolbox:v2
 
   id_tokens:
     AZURE_TOKEN:
@@ -151,7 +151,7 @@ deploy:
 
 infra:setup:
   stage: infra-setup
-  image: registry.gitlab.com/hajarmezouar/simplon-22-pyweb-hajar/toolbox:v1
+  image: registry.gitlab.com/hajarmezouar/simplon-22-pyweb-hajar/toolbox:v2
 
   script:
     - pwsh ./infra/create.ps1
@@ -164,7 +164,7 @@ infra:setup:
 
 infra:teardown:
   stage: infra-teardown
-  image: registry.gitlab.com/hajarmezouar/simplon-22-pyweb-hajar/toolbox:v1
+  image: registry.gitlab.com/hajarmezouar/simplon-22-pyweb-hajar/toolbox:v2
 
   script:
     - pwsh ./infra/destroy.ps1
