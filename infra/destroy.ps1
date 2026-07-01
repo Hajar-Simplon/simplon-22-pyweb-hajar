@@ -1,6 +1,6 @@
-# =============================
+# ==========================
 # Azure Infrastructure Cleanup
-# =============================
+# ==========================
 
 $ErrorActionPreference = "Stop"
 
@@ -12,22 +12,41 @@ Write-Host " Azure Infrastructure Cleanup"
 Write-Host "===================================="
 Write-Host ""
 
-$exists = az group exists --name $ResourceGroup
+# -----------------------------------
+# Container App
+# -----------------------------------
 
-if ($exists -eq "true") {
+Write-Host ""
+Write-Host "Deleting Container App..."
 
-    Write-Host "Deleting Resource Group..."
+az containerapp delete `
+    --name $ContainerAppName `
+    --resource-group $ResourceGroup `
+    --yes 2>$null
 
-    az group delete `
-        --name $ResourceGroup `
-        --yes
+# -----------------------------------
+# Container Apps Environment
+# -----------------------------------
 
-    Write-Host ""
-    Write-Host "Infrastructure successfully deleted."
+Write-Host ""
+Write-Host "Deleting Container Apps Environment..."
 
-}
-else {
+az containerapp env delete `
+    --name $EnvironmentName `
+    --resource-group $ResourceGroup `
+    --yes 2>$null
 
-    Write-Host "Resource Group does not exist."
+# -----------------------------------
+# Azure Container Registry
+# -----------------------------------
 
-}
+Write-Host ""
+Write-Host "Deleting Azure Container Registry..."
+
+az acr delete `
+    --name $AcrName `
+    --resource-group $ResourceGroup `
+    --yes 2>$null
+
+Write-Host ""
+Write-Host "Infrastructure successfully deleted."

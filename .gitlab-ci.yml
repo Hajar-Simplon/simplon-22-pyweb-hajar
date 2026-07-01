@@ -6,7 +6,7 @@ variables:
   IMAGE_TAG: $CI_COMMIT_SHORT_SHA
 
   ACR_NAME: acrhajar2026
-  RESOURCE_GROUP: rg-hajar-aca-prf2026
+  RESOURCE_GROUP: hmezouarRG
   CONTAINER_APP_NAME: aca-pyweb-hajar
 
 stages:
@@ -51,26 +51,7 @@ lint:
 build-image:
   stage: build
 
-  image: mcr.microsoft.com/azure-cli:2.86.0
-
-  id_tokens:
-    AZURE_TOKEN:
-      aud: api://AzureADTokenExchange
-
-  before_script:
-    - |
-      az login \
-        --service-principal \
-        --username "$AZURE_CLIENT_ID" \
-        --tenant "$AZURE_TENANT_ID" \
-        --federated-token "$AZURE_TOKEN"
-
-    - az account set --subscription "$AZURE_SUBSCRIPTION_ID"
-
-build-image:
-  stage: build
-
-  image: docker:28.3
+  image: registry.gitlab.com/hajarmezouar/simplon-22-pyweb-hajar/toolbox:v1
 
   services:
     - docker:28.3-dind
@@ -84,13 +65,9 @@ build-image:
       aud: api://AzureADTokenExchange
 
   before_script:
-    # Install Azure CLI
-    - apk add --no-cache curl bash python3 py3-pip
-    - pip install azure-cli
 
     # Authenticate to Azure using OIDC
-    - |
-      az login \
+    - az login \
         --service-principal \
         --username "$AZURE_CLIENT_ID" \
         --tenant "$AZURE_TENANT_ID" \
@@ -121,57 +98,67 @@ build-image:
 deploy:
   stage: deploy
 
-  image: mcr.microsoft.com/azure-cli:2.86.0
+  image: registry.gitlab.com/hajarmezouar/simplon-22-pyweb-hajar/toolbox:v1
 
   id_tokens:
     AZURE_TOKEN:
       aud: api://AzureADTokenExchange
 
   before_script:
-    - |
-      az login \
+    - az login \
         --service-principal \
         --username "$AZURE_CLIENT_ID" \
         --tenant "$AZURE_TENANT_ID" \
         --federated-token "$AZURE_TOKEN"
 
     - az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+    - az acr login --name $ACR_NAME
 
   script:
     - |
-      az containerapp update \
-        --name $CONTAINER_APP_NAME \
-        --resource-group $RESOURCE_GROUP \
-        --image $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
-
+        az containerapp update \
+          --name $CONTAINER_APP_NAME \
+          --resource-group $RESOURCE_GROUP \
+          --image $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
+  
+        APP_URL=$(az containerapp show \
+          --name $CONTAINER_APP_NAME \
+          --resource-group $RESOURCE_GROUP \
+          --query properties.configuration.ingress.fqdn \
+          -o tsv)
+  
+        echo "DYNAMIC_ENVIRONMENT_URL=https://$APP_URL" > deploy.env
+  
+  artifacts:
+    reports:
+      dotenv: deploy.env
+  
   environment:
     name: staging
-    url: https://aca-pyweb-hajar.orangecliff-d127cb29.francecentral.azurecontainerapps.io
-
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "feature/azure-container-apps"'
-      when: on_success
-
+    url: $DYNAMIC_ENVIRONMENT_URL
+    
 # ==========================================
-# Infrastructure Setup (Bonus)
+# Infrastructure Setup 
 # ==========================================
 
 infra:setup:
   stage: infra
+  image: registry.gitlab.com/hajarmezouar/simplon-22-pyweb-hajar/toolbox:v1
 
   script:
-    - echo "Infrastructure setup handled with PowerShell scripts."
+    - pwsh ./infra/create.ps1
 
   when: manual
 
 # ==========================================
-# Infrastructure Teardown (Bonus)
+# Infrastructure Teardown 
 # ==========================================
 
 infra:teardown:
   stage: infra
+  image: registry.gitlab.com/hajarmezouar/simplon-22-pyweb-hajar/toolbox:v1
 
   script:
-    - echo "Infrastructure teardown handled with PowerShell scripts."
+    - pwsh ./infra/destroy.ps1
 
   when: manual

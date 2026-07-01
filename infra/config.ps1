@@ -1,6 +1,6 @@
 # Azure
 
-$ResourceGroup = "rg-hajar-aca-prf2026"
+$ResourceGroup = "hmezouarRG"
 $Location = "francecentral"
 
 # Azure Container Registry
@@ -18,7 +18,7 @@ $Image = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
 
 # Application
 
-$TargetPort = 80
+$TargetPort = 8080
 
 # ==========================================
 # Managed Identity

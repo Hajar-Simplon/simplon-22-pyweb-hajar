@@ -1,203 +1,274 @@
-# Python Web Application - Azure Container Apps Deployment
+# PyWeb - Azure Container Apps Deployment
 
-## Project Overview
+## Overview
 
-This project demonstrates the deployment of a Python web application to **Azure Container Apps** using a complete CI/CD pipeline on **GitLab CI**.
+This project demonstrates the deployment of a simple Python Flask application to **Azure Container Apps (ACA)** using **GitLab CI/CD**.
 
-The infrastructure is automated with **Azure CLI** and **PowerShell** scripts, while authentication between GitLab and Azure is secured using **OpenID Connect (OIDC)** and a **User Assigned Managed Identity**, without storing any secrets in the pipeline.
-
----
-
-## Architecture
-
-```
-GitLab
-    │
-    │ Commit
-    ▼
-GitLab CI
-    │
-    ├── Test
-    ├── Build
-    ├── Push image to Azure Container Registry
-    └── Deploy to Azure Container Apps
-            │
-            ▼
-Azure Container Registry
-            │
-            ▼
-Azure Container Apps
-```
+The application is containerized with Docker, stored in **Azure Container Registry (ACR)** and deployed automatically through a GitLab pipeline authenticated with **OpenID Connect (OIDC)**. No passwords, client secrets or certificates are stored in the CI/CD pipeline.
 
 ---
 
-## Technologies
+# Architecture
+
+```
+                 GitLab CI/CD
+                       │
+                 OIDC Authentication
+                       │
+                       ▼
+             Azure Managed Identity
+                       │
+                       ▼
+        Azure Container Registry (ACR)
+                       │
+                 Docker Image
+                       │
+                       ▼
+        Azure Container Apps (ACA)
+                       │
+                       ▼
+              Python Flask Application
+```
+
+---
+
+# Technologies
 
 - Python 3.14
+- Flask
 - Docker
 - GitLab CI/CD
+- GitLab SAST
 - Azure CLI
 - Azure Container Registry (ACR)
 - Azure Container Apps (ACA)
 - Azure Managed Identity
 - OpenID Connect (OIDC)
 - PowerShell
+- GNU Make
 
 ---
 
-## Project Structure
+# Project Structure
 
 ```
 .
+├── app.py
+├── Dockerfile
+├── Makefile
+├── requirements.txt
+├── .gitlab-ci.yml
+│
+├── toolbox/
+│   └── Dockerfile
+│
 ├── infra/
 │   ├── config.ps1
 │   ├── create.ps1
 │   ├── destroy.ps1
 │   ├── identity.ps1
-│   └── federation.ps1
+│   ├── federation.ps1
+│   └── quickstart.ps1
 │
-├── app.py
-├── Dockerfile
-├── Makefile
-├── requirements.txt
-└── .gitlab-ci.yml
+└── README.md
 ```
 
 ---
 
-## Infrastructure Automation
+# Infrastructure
 
-Infrastructure provisioning is automated with PowerShell scripts.
+Infrastructure automation is located inside the `infra` folder.
 
-### Create Azure infrastructure
+| Script | Description |
+|---------|-------------|
+| create.ps1 | Creates Azure infrastructure (Resource Group, ACR, ACA Environment and Container App) |
+| destroy.ps1 | Deletes Azure resources created by the project (without deleting the Resource Group) |
+| identity.ps1 | Creates the Managed Identity and assigns Azure roles |
+| federation.ps1 | Configures GitLab OpenID Connect federation |
+| config.ps1 | Centralized configuration |
+| quickstart.ps1 | Optional helper script |
 
-```powershell
-.\infra\create.ps1
-```
-
-Creates:
-
-- Resource Group
-- Azure Container Registry
-- Azure Container Apps Environment
-- Azure Container App
+The infrastructure scripts are idempotent and can be executed multiple times safely.
 
 ---
 
-### Configure Managed Identity
+# GitLab Pipeline
 
-```powershell
-.\infra\identity.ps1
-```
+The GitLab pipeline contains four stages.
 
-Creates:
-
-- User Assigned Managed Identity
-- Contributor role
-- AcrPush role
-
----
-
-### Configure OIDC Federation
-
-```powershell
-.\infra\federation.ps1
-```
-
-Creates the Federated Credential allowing GitLab CI to authenticate to Azure using OIDC.
-
----
-
-### Destroy infrastructure
-
-```powershell
-.\infra\destroy.ps1
-```
-
-Deletes all Azure resources created for the project.
-
----
-
-## Local Development
-
-Build the Docker image:
-
-```bash
-make build
-```
-
-Run the application:
-
-```bash
-make run
-```
-
-Restart the container:
-
-```bash
-make restart
-```
-
-Remove the container:
-
-```bash
-make kill
-```
-
----
-
-## CI/CD Pipeline
-
-The GitLab pipeline contains the following stages:
-
-### Test
+## Test
 
 - Flake8
-- Pytest
 - GitLab SAST
 
-### Build
+---
 
-- Authenticate to Azure using OIDC
-- Build the Docker image
-- Push the image to Azure Container Registry
+## Build
 
-Images are versioned using the Git commit short SHA:
+The build stage:
+
+- authenticates to Azure using OIDC
+- builds the Docker image
+- tags the image with the Git commit SHA
+- pushes the image to Azure Container Registry
+
+Docker image example:
 
 ```
-pyweb-app:$CI_COMMIT_SHORT_SHA
+pyweb-app:8a42f1d
 ```
 
-### Deploy
+---
 
-- Authenticate to Azure using OIDC
-- Deploy the new image to Azure Container Apps
+## Deploy
+
+The deploy stage:
+
+- authenticates with Azure using OIDC
+- deploys the latest image to Azure Container Apps
+- updates the staging environment
 
 ---
 
-## Authentication
+## Infrastructure (Bonus)
 
-The project does not use passwords, certificates or client secrets.
+Two manual jobs are available:
 
-Authentication is performed using:
+- infra:setup
+- infra:teardown
 
-- GitLab Identity Token (OIDC)
-- Azure Managed Identity
-- Federated Credential
-
-This allows GitLab CI to authenticate securely to Azure.
+These jobs execute the PowerShell infrastructure scripts.
 
 ---
 
-## Azure Resources
+# Authentication
 
-- Resource Group: `rg-hajar-aca-prf2026`
-- Azure Container Registry: `acrhajar2026`
-- Container Apps Environment: `env-hajar-aca`
-- Container App: `aca-pyweb-hajar`
+Authentication between GitLab and Azure uses **OpenID Connect (OIDC)**.
+
+No Azure secrets are stored inside GitLab.
+
+Authentication flow:
+
+```
+GitLab Pipeline
+        │
+Issues OIDC Token
+        │
+        ▼
+Managed Identity
+        │
+        ▼
+Azure validates the Federated Credential
+        │
+        ▼
+Authorized deployment
+```
 
 ---
 
-## Author
+# Image Versioning
 
-Hajar Mezouar
+Docker images are versioned using the Git commit SHA.
+
+Example:
+
+```
+pyweb-app:3f82ab9
+```
+
+This guarantees traceability between a deployment and the corresponding Git commit.
+
+---
+
+# Toolbox Image
+
+A dedicated Docker image is used by the GitLab pipeline.
+
+It contains:
+
+- Azure CLI
+- Docker CLI
+- GNU Make
+
+Using a toolbox image avoids reinstalling these tools during every pipeline execution, making the pipeline faster and more reproducible.
+
+---
+
+# Running the Project Locally
+
+## Build the application
+
+```bash
+docker build -t pyweb-app .
+```
+
+## Run the application
+
+```bash
+docker run -p 8080:8080 pyweb-app
+```
+
+Application:
+
+```
+http://localhost:8080
+```
+
+Logs:
+
+```
+http://localhost:8080/logs
+```
+
+---
+
+# Infrastructure Commands
+
+Create infrastructure:
+
+```powershell
+pwsh ./infra/create.ps1
+```
+
+Create Managed Identity:
+
+```powershell
+pwsh ./infra/identity.ps1
+```
+
+Configure GitLab OIDC:
+
+```powershell
+pwsh ./infra/federation.ps1
+```
+
+Delete infrastructure:
+
+```powershell
+pwsh ./infra/destroy.ps1
+```
+
+---
+
+# Design Choices
+
+The following design decisions were made during this project:
+
+- Authentication uses OpenID Connect instead of client secrets.
+- Azure Managed Identity is used to authenticate GitLab.
+- Infrastructure automation is implemented using PowerShell.
+- Infrastructure scripts are idempotent.
+- Docker images are versioned using the Git commit SHA.
+- A reusable toolbox image is used for GitLab CI jobs.
+- Azure Container Registry stores application images.
+- Azure Container Apps hosts the deployed application.
+
+---
+
+# References
+
+- GitLab CI/CD Documentation
+- GitLab OpenID Connect Documentation
+- Azure Container Registry Documentation
+- Azure Container Apps Documentation
+- Azure Managed Identity Documentation

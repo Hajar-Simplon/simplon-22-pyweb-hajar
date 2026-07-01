@@ -76,11 +76,28 @@ $AcrId = az acr show `
     --query id `
     -o tsv
 
-az role assignment create `
+$acrRoleExists = az role assignment list `
     --assignee-object-id $PrincipalId `
-    --assignee-principal-type ServicePrincipal `
-    --role $AcrRole `
-    --scope $AcrId
+    --scope $AcrId `
+    --query "[?roleDefinitionName=='$AcrRole'].id" `
+    -o tsv
+
+if ($acrRoleExists) {
+
+    Write-Host "AcrPush role already assigned."
+
+}
+else {
+
+    Write-Host "Assigning AcrPush..."
+
+    az role assignment create `
+        --assignee-object-id $PrincipalId `
+        --assignee-principal-type ServicePrincipal `
+        --role $AcrRole `
+        --scope $AcrId
+
+}
 
 # ------------------------------------------
 # Container Apps Role
@@ -94,11 +111,28 @@ $RgId = az group show `
     --query id `
     -o tsv
 
-az role assignment create `
+$containerRoleExists = az role assignment list `
     --assignee-object-id $PrincipalId `
-    --assignee-principal-type ServicePrincipal `
-    --role "$ContainerAppsRole" `
-    --scope $RgId
+    --scope $RgId `
+    --query "[?roleDefinitionName=='$ContainerAppsRole'].id" `
+    -o tsv
+
+if ($containerRoleExists) {
+
+    Write-Host "Container Apps role already assigned."
+
+}
+else {
+
+    Write-Host "Assigning Container Apps Contributor..."
+
+    az role assignment create `
+        --assignee-object-id $PrincipalId `
+        --assignee-principal-type ServicePrincipal `
+        --role $ContainerAppsRole `
+        --scope $RgId
+
+}
 
 Write-Host ""
 Write-Host "Managed Identity successfully configured."

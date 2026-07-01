@@ -13,16 +13,6 @@ Write-Host "===================================="
 Write-Host ""
 
 # -----------------------------------
-# Register Azure Providers
-# -----------------------------------
-
-Write-Host "Registering Azure Resource Providers..."
-
-az provider register --namespace Microsoft.App --wait
-az provider register --namespace Microsoft.ContainerRegistry --wait
-az provider register --namespace Microsoft.OperationalInsights --wait
-
-# -----------------------------------
 # Resource Group
 # -----------------------------------
 
