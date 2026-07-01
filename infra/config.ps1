@@ -1,22 +1,32 @@
+# ==========================================
 # Azure
+# ==========================================
 
 $ResourceGroup = "hmezouarRG"
 $Location = "francecentral"
 
+# ==========================================
 # Azure Container Registry
+# ==========================================
 
 $AcrName = "acrhajar2026"
 
+# ==========================================
 # Azure Container Apps
+# ==========================================
 
 $EnvironmentName = "env-hajar-aca"
 $ContainerAppName = "aca-pyweb-hajar"
 
-# Temporary image
+# ==========================================
+# Temporary Image
+# ==========================================
 
 $Image = "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"
 
+# ==========================================
 # Application
+# ==========================================
 
 $TargetPort = 8080
 
@@ -30,9 +40,17 @@ $ManagedIdentityName = "mi-gitlab-aca"
 # Azure Roles
 # ==========================================
 
+# GitLab Managed Identity → Push Docker images
 $AcrRole = "AcrPush"
-$ContainerRegistryRole = "Container Registry Contributor and Data Access Configuration Administrator"
+
+# GitLab Managed Identity → Read the Resource Group
+$ResourceGroupReaderRole = "Reader"
+
+# GitLab Managed Identity → Manage the Container App
 $ContainerAppsRole = "Container Apps Contributor"
+
+# Container App System Managed Identity → Pull images from ACR
+$AcrPullRole = "AcrPull"
 
 # ==========================================
 # GitLab OIDC

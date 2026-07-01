@@ -68,14 +68,8 @@ Write-Host "Principal ID:"
 Write-Host $PrincipalId
 
 # ------------------------------------------
-# Get Azure Resource IDs
+# Check Container App
 # ------------------------------------------
-
-$AcrId = az acr show `
-    --resource-group $ResourceGroup `
-    --name $AcrName `
-    --query id `
-    -o tsv
 
 Write-Host ""
 Write-Host "Checking Container App..."
@@ -90,6 +84,21 @@ if (-not $appExists) {
     throw "Container App '$ContainerAppName' does not exist. Run create.ps1 first."
 
 }
+
+# ------------------------------------------
+# Get Azure Resource IDs
+# ------------------------------------------
+
+$AcrId = az acr show `
+    --resource-group $ResourceGroup `
+    --name $AcrName `
+    --query id `
+    -o tsv
+
+$RgId = az group show `
+    --name $ResourceGroup `
+    --query id `
+    -o tsv
 
 $ContainerAppId = az containerapp show `
     --name $ContainerAppName `
@@ -128,41 +137,41 @@ else {
 }
 
 # ------------------------------------------
-# Container Registry Contributor Role
+# Reader Role
 # ------------------------------------------
 
 Write-Host ""
-Write-Host "Checking Container Registry Contributor role..."
+Write-Host "Checking Reader role..."
 
-$containerRegistryRoleExists = az role assignment list `
+$readerRoleExists = az role assignment list `
     --assignee-object-id $PrincipalId `
-    --scope $AcrId `
-    --query "[?roleDefinitionName=='$ContainerRegistryRole'].id" `
+    --scope $RgId `
+    --query "[?roleDefinitionName=='$ResourceGroupReaderRole'].id" `
     -o tsv
 
-if ($containerRegistryRoleExists) {
+if ($readerRoleExists) {
 
-    Write-Host "Container Registry Contributor role already assigned."
+    Write-Host "Reader role already assigned."
 
 }
 else {
 
-    Write-Host "Assigning Container Registry Contributor..."
+    Write-Host "Assigning Reader role..."
 
     az role assignment create `
         --assignee-object-id $PrincipalId `
         --assignee-principal-type ServicePrincipal `
-        --role $ContainerRegistryRole `
-        --scope $AcrId
+        --role $ResourceGroupReaderRole `
+        --scope $RgId
 
 }
 
 # ------------------------------------------
-# Azure Container Apps Contributor Role
+# Container Apps Contributor Role
 # ------------------------------------------
 
 Write-Host ""
-Write-Host "Checking Azure Container Apps Contributor role..."
+Write-Host "Checking Container Apps Contributor role..."
 
 $containerAppsRoleExists = az role assignment list `
     --assignee-object-id $PrincipalId `
@@ -172,12 +181,12 @@ $containerAppsRoleExists = az role assignment list `
 
 if ($containerAppsRoleExists) {
 
-    Write-Host "Azure Container Apps Contributor role already assigned."
+    Write-Host "Container Apps Contributor role already assigned."
 
 }
 else {
 
-    Write-Host "Assigning Azure Container Apps Contributor..."
+    Write-Host "Assigning Container Apps Contributor..."
 
     az role assignment create `
         --assignee-object-id $PrincipalId `

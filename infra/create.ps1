@@ -150,7 +150,7 @@ else {
         --name $ContainerAppName `
         --resource-group $ResourceGroup `
         --system-assigned
-    
+
     Write-Host "Waiting for Managed Identity propagation..."
     Start-Sleep -Seconds 15
 
@@ -178,7 +178,7 @@ $AcrId = az acr show `
 $AcrPullExists = az role assignment list `
     --assignee-object-id $ContainerPrincipalId `
     --scope $AcrId `
-    --query "[?roleDefinitionName=='AcrPull'].id" `
+    --query "[?roleDefinitionName=='$AcrPullRole'].id" `
     -o tsv
 
 if ($AcrPullExists) {
@@ -193,7 +193,7 @@ else {
     az role assignment create `
         --assignee-object-id $ContainerPrincipalId `
         --assignee-principal-type ServicePrincipal `
-        --role AcrPull `
+        --role $AcrPullRole `
         --scope $AcrId
 
 }
@@ -238,7 +238,7 @@ Write-Host "Configuring GitLab Managed Identity..."
 pwsh "$PSScriptRoot/identity.ps1"
 
 # -----------------------------------
-# Configure GitLab Federation
+# Configure GitLab OIDC Federation
 # -----------------------------------
 
 Write-Host ""
