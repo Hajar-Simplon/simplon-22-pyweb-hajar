@@ -84,13 +84,10 @@ build-image:
     - docker build -t $IMAGE_NAME:$IMAGE_TAG .
 
     # Tag image for ACR
-    - docker tag \
-        $IMAGE_NAME:$IMAGE_TAG \
-        $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
+    - docker tag $IMAGE_NAME:$IMAGE_TAG $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
 
     # Push image
-    - docker push \
-        $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
+    - docker push $ACR_NAME.azurecr.io/$IMAGE_NAME:$IMAGE_TAG
 
 # ==========================================
 # Deploy
